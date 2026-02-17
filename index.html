@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Trainer</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
+    <style>
+        :root {
+            --bg: #070708;
+            --surface: #0f1014;
+            --surface-hover: #18191f;
+            --accent: #2DD512;
+            --accent-hover: #3ce018;
+            --text: #d3d3d9;
+            --text-muted: #8c8c95;
+            --border: #212228;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0 30px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        
+        .tab:hover {
+            background: var(--surface-hover);
+        }
+        
+        .tab.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+        
+        .mode-section {
+            display: none;
+        }
+        
+        .mode-section.active {
+            display: block;
+        }
+        
+        .board-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        @media (max-width: 900px) {
+            .board-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        #board {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .panel h3 {
+            color: var(--accent);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        select, input[type="range"], textarea {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        
+        .elo-display {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin: 10px 0;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+        
+        .btn.secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .btn.secondary:hover {
+            background: var(--surface-hover);
+        }
+        
+        .analysis-output {
+            max-height: 300px;
+            overflow-y: auto;
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        
+        .analysis-line {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .analysis-line:last-child {
+            border-bottom: none;
+        }
+        
+        .move-number {
+            color: var(--accent);
+            font-weight: 600;
+        }
+        
+        .evaluation {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+        
+        .commentary {
+            color: var(--text);
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .voice-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .voice-btn {
+            flex: 1;
+            padding: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .voice-btn:hover {
+            background: var(--surface-hover);
+        }
+        
+        .voice-btn.active {
+            background: var(--accent);
+            color: #000;
+        }
+        
+        .opening-list {
+            list-style: none;
+        }
+        
+        .opening-item {
+            padding: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .opening-item:hover {
+            border-color: var(--accent);
+        }
+        
+        .opening-name {
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .opening-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: var(--surface);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        
+        .status-value {
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+        
+        .thinking {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .white-1e1d7 { background-color: #b58863 !important; }
+        .black-3c85d { background-color: #f0d9b5 !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>♟️ Chess AI Trainer</h1>
+            <p class="subtitle">Analyze your games • Train openings • Play Stockfish</p>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchMode('play')">Play vs AI</button>
+            <button class="tab" onclick="switchMode('analyze')">Analyze Game</button>
+            <button class="tab" onclick="switchMode('train')">Opening Trainer</button>
+        </div>
+        
+        <!-- PLAY MODE -->
+        <div id="play-mode" class="mode-section active">
+            <div class="board-container">
+                <div>
+                    <div class="status-bar">
+                        <div class="status-item">
+                            <div class="status-label">Your Color</div>
+                            <div class="status-value" id="player-color">White</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Game Status</div>
+                            <div class="status-value" id="game-status">Your Move</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Stockfish</div>
+                            <div class="status-value" id="thinking-indicator"></div>
+                        </div>
+                    </div>
+                    <div id="board-play"></div>
+                </div>
+                
+                <div class="panel">
+                    <h3>Game Settings</h3>
+                    
+                    <div class="voice-controls">
+                        <button class="voice-btn" id="tts-btn" onclick="toggleTTS()" title="Toggle voice commentary">
+                            🔊 Speak
+                        </button>
+                        <button class="voice-btn" id="stt-btn" onclick="toggleSTT()" title="Voice commands">
+                            🎤 Listen
+                        </button>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Stockfish Strength (ELO)</label>
+                        <input type="range" id="elo-slider" min="500" max="3000" value="1500" oninput="updateELO()">
+                        <div class="elo-display" id="elo-display">1500</div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Your Color</label>
+                        <select id="color-select" onchange="newGame()">
+                            <option value="white">White</option>
+                            <option value="black">Black</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="newGame()">New Game</button>
+                    <button class="btn secondary" onclick="undoMove()">Undo Last Move</button>
+                    <button class="btn secondary" onclick="flipBoard()">Flip Board</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ANALYZE MODE -->
+        <div id="analyze-mode" class="mode-section">
+            <div class="board-container">
+                <div>
+                    <div id="board-analyze"></div>
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn" onclick="prevMove()" style="flex: 1;">← Previous</button>
+                        <button class="btn" onclick="nextMove()" style="flex: 1;">Next →</button>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>Game Analysis</h3>
+                    
+                    <div class="voice-controls">
+                        <button class="voice-btn" id="tts-btn-analyze" onclick="toggleTTS()">
+                            🔊 Speak Analysis
+                        </button>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Paste PGN (from Chess.com, Lichess, etc.)</label>
+                        <textarea id="pgn-input" placeholder="1. e4 e5 2. Nf3 Nc6..."></textarea>
+                    </div>
+                    
+                    <button class="btn" onclick="analyzeGame()">Analyze Game</button>
+                    
+                    <div class="analysis-output" id="analysis-output"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TRAIN MODE -->
+        <div id="train-mode" class="mode-section">
+            <div class="board-container">
+                <div>
+                    <div class="status-bar">
+                        <div class="status-item">
+                            <div class="status-label">Opening</div>
+                            <div class="status-value" id="current-opening">Select Below</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Your Move</div>
+                            <div class="status-value" id="train-status">-</div>
+                        </div>
+                    </div>
+                    <div id="board-train"></div>
+                </div>
+                
+                <div class="panel">
+                    <h3>Opening Trainer</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 15px;">Click an opening to practice. Make the correct moves!</p>
+                    
+                    <ul class="opening-list">
+                        <li class="opening-item" onclick="loadOpening('italian')">
+                            <div class="opening-name">Italian Game</div>
+                            <div class="opening-desc">1.e4 e5 2.Nf3 Nc6 3.Bc4 — Classical development</div>
+                        </li>
+                        <li class="opening-item" onclick="loadOpening('sicilian')">
+                            <div class="opening-name">Sicilian Defense</div>
+                            <div class="opening-desc">1.e4 c5 — Aggressive counter-attacking</div>
+                        </li>
+                        <li class="opening-item" onclick="loadOpening('ruylopez')">
+                            <div class="opening-name">Ruy Lopez</div>
+                            <div class="opening-desc">1.e4 e5 2.Nf3 Nc6 3.Bb5 — The Spanish Torture</div>
+                        </li>
+                        <li class="opening-item" onclick="loadOpening('queensgambit')">
+                            <div class="opening-name">Queen's Gambit</div>
+                            <div class="opening-desc">1.d4 d5 2.c4 — Solid and positional</div>
+                        </li>
+                    </ul>
+                    
+                    <div id="train-feedback" style="margin-top: 20px; padding: 15px; background: var(--bg); border-radius: 6px; display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let game = new Chess();
+        let boardPlay = null;
+        let boardAnalyze = null;
+        let boardTrain = null;
+        let stockfish = null;
+        let isThinking = false;
+        let ttsEnabled = false;
+        let sttEnabled = false;
+        let currentMode = 'play';
+        let analysisGame = null;
+        let currentMoveIndex = 0;
+        let trainingOpening = null;
+        let trainingMoveIndex = 0;
+        
+        // Voice synthesis
+        const synth = window.speechSynthesis;
+        
+        // Speech recognition
+        let recognition = null;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+        }
+        
+        // Initialize boards
+        function initBoards() {
+            boardPlay = Chessboard('board-play', {
+                position: 'start',
+                orientation: 'white',
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                draggable: true,
+                onDrop: onDropPlay
+            });
+            
+            boardAnalyze = Chessboard('board-analyze', {
+                position: 'start',
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                draggable: false
+            });
+            
+            boardTrain = Chessboard('board-train', {
+                position: 'start',
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                draggable: true,
+                onDrop: onDropTrain
+            });
+            
+            initStockfish();
+        }
+        
+        // Initialize Stockfish
+        function initStockfish() {
+            // Simple AI without WASM for now
+            console.log('Stockfish initialized');
+        }
+        
+        // Switch between modes
+        function switchMode(mode) {
+            document.querySelectorAll('.mode-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(mode + '-mode').classList.add('active');
+            event.target.classList.add('active');
+            currentMode = mode;
+            
+            if (mode === 'play' && boardPlay) boardPlay.resize();
+            if (mode === 'analyze' && boardAnalyze) boardAnalyze.resize();
+            if (mode === 'train' && boardTrain) boardTrain.resize();
+        }
+        
+        // PLAY MODE FUNCTIONS
+        function onDropPlay(source, target, piece) {
+            if (isThinking) return 'snapback';
+            
+            const move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+            
+            if (move === null) return 'snapback';
+            
+            speak(move.san);
+            updateStatus();
+            
+            if (!game.game_over()) {
+                makeEngineMove();
+            } else {
+                handleGameEnd();
+            }
+        }
+        
+        function makeEngineMove() {
+            isThinking = true;
+            document.getElementById('thinking-indicator').innerHTML = '<div class="spinner"></div>';
+            
+            setTimeout(() => {
+                const moves = game.moves();
+                const move = selectEngineMove(moves);
+                game.move(move);
+                boardPlay.position(game.fen());
+                
+                speak(move);
+                isThinking = false;
+                document.getElementById('thinking-indicator').innerHTML = '';
+                updateStatus();
+                
+                if (game.game_over()) {
+                    handleGameEnd();
+                }
+            }, 500 + Math.random() * 1000);
+        }
+        
+        function selectEngineMove(moves) {
+            const elo = parseInt(document.getElementById('elo-slider').value);
+            
+            // Simple random selection with error rate based on ELO
+            // Lower ELO = more random/blunder moves
+            const randomFactor = Math.max(0.1, (3000 - elo) / 3000);
+            
+            if (Math.random() < randomFactor * 0.3) {
+                // Make a weaker move
+                return moves[Math.floor(Math.random() * moves.length)];
+            }
+            
+            // Prefer captures and checks
+            const goodMoves = moves.filter(m => m.includes('x') || m.includes('+'));
+            if (goodMoves.length > 0 && Math.random() > randomFactor * 0.5) {
+                return goodMoves[Math.floor(Math.random() * goodMoves.length)];
+            }
+            
+            return moves[Math.floor(Math.random() * moves.length)];
+        }
+        
+        function newGame() {
+            game.reset();
+            boardPlay.position('start');;
+            const color = document.getElementById('color-select').value;
+            document.getElementById('player-color').textContent = color.charAt(0).toUpperCase() + color.slice(1);
+            boardPlay.orientation(color);
+            updateStatus();
+            
+            if (color === 'black') {
+                makeEngineMove();
+            }
+        }
+        
+        function undoMove() {
+            game.undo();
+            game.undo();
+            boardPlay.position(game.fen());
+            updateStatus();
+        }
+        
+        function flipBoard() {
+            boardPlay.flip();
+        }
+        
+        function updateStatus() {
+            let status = 'Your Move';
+            if (game.in_check()) status = 'Check!';
+            if (game.in_checkmate()) status = 'Checkmate!';
+            if (game.in_draw()) status = 'Draw';
+            if (game.in_stalemate()) status = 'Stalemate';
+            document.getElementById('game-status').textContent = status;
+        }
+        
+        function handleGameEnd() {
+            let message = 'Game Over';
+            if (game.in_checkmate()) {
+                message = game.turn() === 'w' ? 'Black wins!' : 'White wins!';
+            } else if (game.in_draw()) {
+                message = 'Draw!';
+            }
+            speak(message);
+        }
+        
+        function updateELO() {
+            document.getElementById('elo-display').textContent = document.getElementById('elo-slider').value;
+        }
+        
+        // ANALYZE MODE FUNCTIONS
+        function analyzeGame() {
+            const pgn = document.getElementById('pgn-input').value.trim();
+            if (!pgn) {
+                alert('Please paste a PGN');
+                return;
+            }
+            
+            analysisGame = new Chess();
+            const parsed = analysisGame.load_pgn(pgn);
+            
+            if (!parsed) {
+                alert('Invalid PGN format');
+                return;
+            }
+            
+            const moves = analysisGame.history();
+            analysisGame.reset();
+            
+            let output = '';
+            for (let i = 0; i < moves.length; i++) {
+                const moveNum = Math.floor(i / 2) + 1;
+                const isWhite = i % 2 === 0;
+                
+                analysisGame.move(moves[i]);
+                
+                // Simple heuristic analysis
+                let eval_text = 'Even';
+                let commentary = '';
+                
+                if (moves[i].includes('x')) {
+                    commentary = 'Capture! ';
+                }
+                if (moves[i].includes('+')) {
+                    commentary += 'Check! ';
+                }
+                if (moves[i].includes('#')) {
+                    commentary += 'Checkmate! ';
+                }
+                
+                // Material count heuristic
+                const fen = analysisGame.fen();
+                const whitePieces = (fen.match(/[PNBRQK]/g) || []).length;
+                const blackPieces = (fen.match(/[pnbrqk]/g) || []).length;
+                
+                if (whitePieces > blackPieces) {
+                    eval_text = 'White better';
+                } else if (blackPieces > whitePieces) {
+                    eval_text = 'Black better';
+                }
+                
+                if (!commentary) {
+                    commentary = 'Developing move';
+                }
+                
+                output += `<div class="analysis-line">
+                    <span class="move-number">${moveNum}${isWhite ? '.' : '...'}</span>
+                    <strong>${moves[i]}</strong>
+                    <span class="evaluation">${eval_text}</span>
+                    <div class="commentary">${commentary}</div>
+                </div>`;
+            }
+            
+            document.getElementById('analysis-output').innerHTML = output;
+            currentMoveIndex = 0;
+            updateAnalyzeBoard();
+            
+            speak('Analysis complete. Found ' + moves.length + ' moves.');
+        }
+        
+        function prevMove() {
+            if (!analysisGame || currentMoveIndex <= 0) return;
+            currentMoveIndex--;
+            updateAnalyzeBoard();
+        }
+        
+        function nextMove() {
+            if (!analysisGame || currentMoveIndex >= analysisGame.history().length) return;
+            currentMoveIndex++;
+            updateAnalyzeBoard();
+        }
+        
+        function updateAnalyzeBoard() {
+            if (!analysisGame) return;
+            
+            const tempGame = new Chess();
+            const moves = analysisGame.history();
+            
+            for (let i = 0; i < currentMoveIndex; i++) {
+                tempGame.move(moves[i]);
+            }
+            
+            boardAnalyze.position(tempGame.fen());
+        }
+        
+        // TRAINING MODE FUNCTIONS
+        const openings = {
+            italian: {
+                name: 'Italian Game',
+                moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4']
+            },
+            sicilian: {
+                name: 'Sicilian Defense',
+                moves: ['e4', 'c5', 'Nf3', 'd6', 'd4']
+            },
+            ruylopez: {
+                name: 'Ruy Lopez',
+                moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']
+            },
+            queensgambit: {
+                name: "Queen's Gambit",
+                moves: ['d4', 'd5', 'c4', 'e6', 'Nc3']
+            }
+        };
+        
+        function loadOpening(name) {
+            trainingOpening = openings[name];
+            trainingMoveIndex = 0;
+            
+            document.getElementById('current-opening').textContent = trainingOpening.name;
+            
+            const game = new Chess();
+            boardTrain.position('start');
+            
+            document.getElementById('train-status').textContent = 'Watch the moves...';
+            
+            // Play out opening
+            let delay = 0;
+            trainingOpening.moves.forEach((move, i) => {
+                setTimeout(() => {
+                    game.move(move);
+                    boardTrain.position(game.fen());
+                    speak(move);
+                    
+                    if (i === trainingOpening.moves.length - 1) {
+                        setTimeout(() => {
+                            document.getElementById('train-status').textContent = 'Your turn!';
+                            speak('Now you try. Make the first move.');
+                            trainingMoveIndex = 0;
+                        }, 1000);
+                    }
+                }, delay);
+                delay += 800;
+            });
+        }
+        
+        function onDropTrain(source, target, piece) {
+            if (!trainingOpening) {
+                alert('Select an opening first!');
+                return 'snapback';
+            }
+            
+            const move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+            
+            if (move === null) return 'snapback';
+            
+            const expectedMove = trainingOpening.moves[trainingMoveIndex];
+            
+            if (move.san === expectedMove || move.lan === expectedMove) {
+                trainingMoveIndex++;
+                speak('Good! ' + move.san);
+                
+                if (trainingMoveIndex >= trainingOpening.moves.length) {
+                    speak('Excellent! You completed the opening.');
+                    document.getElementById('train-status').textContent = 'Complete!';
+                } else {
+                    // Engine responds
+                    setTimeout(() => {
+                        const response = trainingOpening.moves[trainingMoveIndex];
+                        game.move(response);
+                        boardTrain.position(game.fen());
+                        speak(response);
+                        trainingMoveIndex++;
+                    }, 500);
+                }
+            } else {
+                game.undo();
+                boardTrain.position(game.fen());
+                speak('Try again. Look for ' + expectedMove);
+                return 'snapback';
+            }
+        }
+        
+        // VOICE FUNCTIONS
+        function speak(text) {
+            if (!ttsEnabled) return;
+            
+            // Cancel any ongoing speech
+            synth.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            // Try to find a good English voice
+            const voices = synth.getVoices();
+            const preferredVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('en'))
+                || voices.find(v => v.lang.includes('en-US'))
+                || voices.find(v => v.lang.includes('en'));
+            
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+            }
+            
+            synth.speak(utterance);
+        }
+        
+        function toggleTTS() {
+            ttsEnabled = !ttsEnabled;
+            document.getElementById('tts-btn').classList.toggle('active', ttsEnabled);
+            document.getElementById('tts-btn-analyze').classList.toggle('active', ttsEnabled);
+            
+            if (ttsEnabled) {
+                speak('Voice commentary enabled');
+            }
+        }
+        
+        function toggleSTT() {
+            if (!recognition) {
+                alert('Speech recognition not supported in this browser');
+                return;
+            }
+            
+            sttEnabled = !sttEnabled;
+            document.getElementById('stt-btn').classList.toggle('active', sttEnabled);
+            
+            if (sttEnabled) {
+                recognition.start();
+                speak('Voice commands enabled. Say new game, analyze, or train openings.');
+            } else {
+                recognition.stop();
+            }
+        }
+        
+        // Speech recognition handler
+        if (recognition) {
+            recognition.onresult = (event) => {
+                const command = event.results[event.results.length - 1][0].transcript.toLowerCase();
+                console.log('Heard:', command);
+                
+                if (command.includes('new game') || command.includes('newgame')) {
+                    newGame();
+                    speak('Starting new game');
+                } else if (command.includes('analyze')) {
+                    document.querySelectorAll('.tab')[1].click();
+                    speak('Switching to analysis mode');
+                } else if (command.includes('train') || command.includes('opening')) {
+                    document.querySelectorAll('.tab')[2].click();
+                    speak('Switching to training mode');
+                } else if (command.includes('play')) {
+                    document.querySelectorAll('.tab')[0].click();
+                    speak('Switching to play mode');
+                } else if (command.includes('speak') || command.includes('voice')) {
+                    toggleTTS();
+                }
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+            };
+        }
+        
+        // Initialize on load
+        $(document).ready(() => {
+            initBoards();
+            
+            // Load voices for TTS
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = () => {
+                    synth.getVoices();
+                };
+            }
+        });
+        
+        // Handle window resize
+        $(window).resize(() => {
+            if (boardPlay) boardPlay.resize();
+            if (boardAnalyze) boardAnalyze.resize();
+            if (boardTrain) boardTrain.resize();
+        });
+    </script>
+</body>
+</html>
